@@ -4,7 +4,7 @@ import os
 import gzip
 import pickle as cPickle
 import matplotlib.pyplot as plt
-
+import matplotlib.patches as mpatches
 
 #Load MNIST
 def mnist(datasets_dir='./data'):
@@ -72,7 +72,7 @@ def cnn_model_fn(features, labels, mode, params):
         activation=tf.nn.relu)
 
     # Pooling Layer #1
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=1)
+    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
     # Convolutional Layer #2 and Pooling Layer #2
     conv2 = tf.layers.conv2d(
@@ -81,16 +81,14 @@ def cnn_model_fn(features, labels, mode, params):
         kernel_size=[3, 3],
         padding="same",
         activation=tf.nn.relu)
-    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=1)
+    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
     # Dense Layer
-    pool2_flat = tf.reshape(pool2, [-1, 26 * 26 * num_filters])
+    pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * num_filters])
     dense = tf.layers.dense(inputs=pool2_flat, units=128, activation=tf.nn.relu)
-    dropout = tf.layers.dropout(
-        inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
 
     # Logits Layer
-    logits = tf.layers.dense(inputs=dropout, units=10)
+    logits = tf.layers.dense(inputs=dense, units=10)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -127,20 +125,33 @@ def cnn_model_fn(features, labels, mode, params):
 rates = [0.1, 0.01, 0.001, 0.0001]
 max_epochs = 100
 axis = np.arange(max_epochs)
+
+#setup for plot
 plt.figure()
-color = ['r', 'g', 'b', 'o']
-for rate, c in zip(rates, color):
+plt.suptitle("Validation losses for different learning rates", fontsize=12)
+plt.xlabel("epoch")
+plt.ylabel("loss")
+
+#Colors and legend for plot
+color = ['r', 'g', 'b', 'y']
+l1 = mpatches.Patch(color='r', label='0.1')
+l2 = mpatches.Patch(color='g', label='0.01')
+l3 = mpatches.Patch(color='b', label='0.001')
+l4 = mpatches.Patch(color='y', label='0.0001')
+plt.legend(handles=[l1, l2, l3, l4])
+
+for i in range(len(rates)):
     # Create the Estimator
-    mnist_cnn = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model_lr"+str(i), params ={"num_filters": 16, "learning_rate": rate})
+    mnist_cnn = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model_lr"+str(i), params ={"num_filters": 16, "learning_rate": rates[i]})
     losses = np.zeros(max_epochs)
 
-    for i in range(max_epochs):
+    for j in range(max_epochs):
         # Train the model
         train_input_fn = tf.estimator.inputs.numpy_input_fn(
                 x={"x": X_train},
                 y=y_train,
                 batch_size=64,
-                num_epochs=None,
+                num_epochs=1,
                 shuffle=True)
         mnist_cnn.train(
                 input_fn=train_input_fn,
@@ -151,65 +162,72 @@ for rate, c in zip(rates, color):
             y=y_valid,
             num_epochs=1,
             shuffle=False)
-        losses[i] = mnist_cnn.evaluate(input_fn=eval_input_fn)["loss"]
-        print("Validation loss in epoch {}: {}" .format(i, losses[i]))
+        losses[j] = mnist_cnn.evaluate(input_fn=eval_input_fn)["loss"]
+        print("Validation loss in epoch {}: {}" .format(j, losses[j]))
 
-    print("Learning rate: {}." .format(rate))
-    plt.plot(axis, losses, c=c)
+    print("Learning rate: {}." .format(rates[i]))
+    plt.plot(axis, losses, c=color[i])
 plt.show()
 
-
-#training speed with GPU and CPU on different filter sizes
 import time
+#training speed with GPU and CPU on different filter sizes
+with tf.device("/device:GPU:0"):
+    nums = [8, 16, 32, 64, 128, 256]
+    times = [0, 0, 0, 0, 0, 0]
 
-nums = [8, 16, 32, 64, 128, 256]
-times = [0, 0, 0, 0, 0, 0]
+    for i in range(len(nums)):
+        # Create the Estimator
+        mnist_cnn = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model_time_gpu" + str(i), params ={"num_filters": nums[i], "learning_rate": 0.1})
+        start_gpu= time.time()
+        max_epochs = 10
 
-for i in range(len(nums)):
-    # Create the Estimator
-    mnist_cnn = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model_time_gpu" + str(i), params ={"num_filters": nums[i], "learning_rate": 0.1})
-    start_gpu= time.time()
-    max_epochs = 100
+        for j in range(max_epochs):
+            # Train the model
+            train_input_fn = tf.estimator.inputs.numpy_input_fn(
+                    x={"x": X_train},
+                    y=y_train,
+                    batch_size=64,
+                    num_epochs=1,
+                    shuffle=True)
+            mnist_cnn.train(
+                    input_fn=train_input_fn,
+                    steps=1)
 
-    for i in range(max_epochs):
-        # Train the model
-        train_input_fn = tf.estimator.inputs.numpy_input_fn(
-                x={"x": X_train},
-                y=y_train,
-                batch_size=64,
-                num_epochs=None,
-                shuffle=True)
-        mnist_cnn.train(
-                input_fn=train_input_fn,
-                steps=1)
+            eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+                x={"x": X_valid},
+                y=y_valid,
+                num_epochs=1,
+                shuffle=False)
+            val_loss = mnist_cnn.evaluate(input_fn=eval_input_fn)
+            print("Validation loss in epoch {}: {:.2}" .format(j, val_loss["loss"]))
+            print("Accuracy on validation set in epoch {}: {:.2}" .format(j, val_loss["accuracy"]))
 
-        eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={"x": X_valid},
-            y=y_valid,
-            num_epochs=1,
-            shuffle=False)
-        val_loss = mnist_cnn.evaluate(input_fn=eval_input_fn)
-        print("Validation loss in epoch {}: {%.2f}" .format(val_loss["global_step"], val_loss["loss"]))
-        print("Accuracy on validation set in epoch {}: {%.2f}" .format(val_loss["global_step"], val_loss["accuracy"]))
-        
-    end_gpu = time.time()
-    diff = end_gpu - start_gpu
-    times[i] = diff
-    print("{} filters with GPU. Time was: {} ms" .format(nums[i], diff))
+        end_gpu = time.time()
+        diff = end_gpu - start_gpu
+        times[i] = diff
+        print("{} filters with GPU. Time was: {} ms" .format(nums[i], diff))
 
-plt.figure()
-plt.scatter(nums, times, c='g')
+    #plot setup
+    plt.figure()
+    plt.suptitle("Computation times for different filter sizes on GPU and CPU", fontsize=12)
+    plt.xlabel("number of filters")
+    plt.ylabel("time in ms")
+    l1 = mpatches.Patch(color='g', label='GPU times')
+    l2 = mpatches.Patch(color='r', label='CPU times')
+    plt.legend(handles=[l1, l2])
 
-#with cpu
-with tf.device('/cpu:0'):
+    plt.scatter(nums, times, c='g')
+
+#with cpu for comparison
+with tf.device('/device:CPU:0'):
     nums = [8, 16, 32, 64]
     times = [0, 0, 0, 0]
 
     for i in range(len(nums)):
         # Create the Estimator
         mnist_cnn = tf.estimator.Estimator(model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model_time_cpu" + str(i), params ={"num_filters": nums[i], "learning_rate": 0.1})
-        start_gpu= time.time()
-        max_epochs = 100
+        start_cpu= time.time()
+        max_epochs = 10
 
         for j in range(max_epochs):
             train_input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -228,21 +246,13 @@ with tf.device('/cpu:0'):
                 num_epochs=1,
                 shuffle=False)
             val_loss = mnist_cnn.evaluate(input_fn=eval_input_fn)
-            print("Validation loss in epoch {}: {%.2f}" .format(val_loss["global_step"], val_loss["loss"]))
-            print("Accuracy on validation set in epoch {}: {%.2f}" .format(val_loss["global_step"], val_loss["accuracy"]))
+            print("Validation loss in epoch {}: {:.2}" .format(j, val_loss["loss"]))
+            print("Accuracy on validation set in epoch {}: {:.2}" .format(j, val_loss["accuracy"]))
 
-        end_gpu = time.time()
-        diff = end_gpu -start_gpu
+        end_cpu = time.time()
+        diff = end_cpu -start_cpu
         times[i] = diff
-        print("{} filters with CPU. Time was: {%.2f} ms" .format(nums[i], diff))
+        print("{} filters with CPU. Time was: {:.2} ms" .format(nums[i], diff))
 
-print(nums)
-print(times)
 plt.scatter(nums, times, c='r')
 plt.show()
-
-if __name__ =="__main__":
-   #with gpu
-   #with tf.device("/device:GPU:0"):
-    #    tf.app.run()
-    tf.app.run()
