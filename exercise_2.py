@@ -193,15 +193,6 @@ with tf.device("/device:GPU:0"):
                     input_fn=train_input_fn,
                     steps=1)
 
-            eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-                x={"x": X_valid},
-                y=y_valid,
-                num_epochs=1,
-                shuffle=False)
-            val_loss = mnist_cnn.evaluate(input_fn=eval_input_fn)
-            print("Validation loss in epoch {}: {:.2}" .format(j, val_loss["loss"]))
-            print("Accuracy on validation set in epoch {}: {:.2}" .format(j, val_loss["accuracy"]))
-
         end_gpu = time.time()
         diff = end_gpu - start_gpu
         times[i] = diff
@@ -239,15 +230,6 @@ with tf.device('/device:CPU:0'):
             mnist_cnn.train(
                 input_fn=train_input_fn,
                 steps=1)
-
-            eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-                x={"x": X_valid},
-                y=y_valid,
-                num_epochs=1,
-                shuffle=False)
-            val_loss = mnist_cnn.evaluate(input_fn=eval_input_fn)
-            print("Validation loss in epoch {}: {:.2}" .format(j, val_loss["loss"]))
-            print("Accuracy on validation set in epoch {}: {:.2}" .format(j, val_loss["accuracy"]))
 
         end_cpu = time.time()
         diff = end_cpu -start_cpu
