@@ -55,19 +55,23 @@ np.swapaxes(valid_data, 1, 2)
 input_shape=train_data.shape[1:]
 num_filters_first=32
 num_filters_second=64
-num_filters_third=16
+num_filters_third=64
 filter_size=2
+filter_size_second=4
 dropout=0.25
 pool_size=2
 activation='relu'
-units=128
+units=256
 dropout_dense=0.5
 
 # Build Keras model
 model = Sequential()
 
-model.add(Conv1D(num_filters_third, filter_size, padding='same', activation=activation, input_shape=input_shape))
-model.add(Conv1D(num_filters_third, filter_size, padding='same', activation=activation))
+model.add(Conv1D(num_filters_second, filter_size, padding='same', activation=activation, input_shape=input_shape))
+model.add(Conv1D(num_filters_second, filter_size, padding='same', activation=activation))
+model.add(MaxPooling1D())
+model.add(Conv1D(num_filters_third, filter_size_second, padding='same', activation=activation, input_shape=input_shape))
+model.add(Conv1D(num_filters_third, filter_size_second, padding='same', activation=activation))
 model.add(GlobalMaxPooling1D())
 model.add(Dropout(dropout))
 
@@ -83,12 +87,12 @@ lr=0.01
 decay=1e-6
 momentum=0.9
 nesterov=True
-batch_size=64
-epochs=1000
+batch_size=32
+epochs=100
 
 #train with SGD
 sgd = SGD(lr=lr, clipnorm=1., decay=decay, momentum=momentum, nesterov=nesterov)
-model.compile(loss='categorical_crossentropy', optimizer=sgd)
+model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs, validation_data=(valid_data, valid_labels))
 
