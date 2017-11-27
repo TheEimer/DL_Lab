@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from keras.models import load_model
 from random import randrange
 # custom modules
 from utils     import Options
@@ -10,7 +11,7 @@ opt = Options()
 sim = Simulator(opt.map_ind, opt.cub_siz, opt.pob_siz, opt.act_num)
 
 # TODO: load your agent
-agent =None
+agent = load_model('agent.hd5')
 
 # 1. control loop
 if opt.disp_on:

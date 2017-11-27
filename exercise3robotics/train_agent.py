@@ -51,44 +51,43 @@ valid_data = valid_data.reshape(valid_data.shape[0], 4, valid_data[0].shape[0]/4
 np.swapaxes(train_data, 1, 2)
 np.swapaxes(valid_data, 1, 2)
 
-print(train_labels.shape)
 #Model Parameters
 input_shape=train_data.shape[1:]
-num_filters=32
+num_filters_first=32
+num_filters_second=64
+num_filters_third=16
 filter_size=2
 dropout=0.25
 pool_size=2
 activation='relu'
-units=256
+units=128
 dropout_dense=0.5
 
 # Build Keras model
 model = Sequential()
 
-model.add(Conv1D(num_filters, filter_size, padding='same', activation=activation, input_shape=input_shape))
-model.add(Conv1D(num_filters, filter_size, padding='same', activation=activation))
-model.add(MaxPooling1D(pool_size))
-model.add(Conv1D(num_filters, filter_size, padding='same', activation=activation))
-model.add(Conv1D(num_filters, filter_size, padding='same', activation=activation))
+model.add(Conv1D(num_filters_third, filter_size, padding='same', activation=activation, input_shape=input_shape))
+model.add(Conv1D(num_filters_third, filter_size, padding='same', activation=activation))
 model.add(GlobalMaxPooling1D())
 model.add(Dropout(dropout))
 
 model.add(Dense(units, activation=activation))
-model.add(Dropout(dropout_dense))
+model.add(Dense(units, activation=activation))
+model.add(Dense(units, activation=activation))
 model.add(Dense(units, activation=activation))
 model.add(Dropout(dropout_dense))
 model.add(Dense(5, activation='softmax'))
 
 #Training Hyperparameters
-lr=0.1
+lr=0.01
 decay=1e-6
 momentum=0.9
 nesterov=True
 batch_size=64
-epochs=100
+epochs=1000
 
 #train with SGD
-sgd = SGD(lr=lr, decay=decay, momentum=momentum, nesterov=nesterov)
+sgd = SGD(lr=lr, clipnorm=1., decay=decay, momentum=momentum, nesterov=nesterov)
 model.compile(loss='categorical_crossentropy', optimizer=sgd)
 
 model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs, validation_data=(valid_data, valid_labels))
