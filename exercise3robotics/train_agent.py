@@ -2,7 +2,7 @@ import numpy as np
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv1D, MaxPooling1D, GlobalMaxPooling1D
+from keras.layers import Conv2D, MaxPooling2D, GlobalMaxPooling2D
 from keras.optimizers import SGD
 
 # custom modules
@@ -44,21 +44,20 @@ trans = TransitionTable(opt.state_siz, opt.act_num, opt.hist_len,
 train_data, train_labels = trans.get_train()
 valid_data, valid_labels = trans.get_valid()
 
-#reshape data to represent the history
-train_data = train_data.reshape(train_data.shape[0], 4, train_data[0].shape[0]/4)
-valid_data = valid_data.reshape(valid_data.shape[0], 4, valid_data[0].shape[0]/4)
-#swap axes to get an input of (batch_size, board, history)
-np.swapaxes(train_data, 1, 2)
-np.swapaxes(valid_data, 1, 2)
+#reshape data to represent the history and get the screen version
+train_data = train_data.reshape(train_data.shape[0], 4, 25, 25)
+valid_data = valid_data.reshape(valid_data.shape[0], 4, 25, 25)
+#swap axes to get an input of (batch_size, board_y, board_x history) for the convolution
+np.swapaxes(train_data, 1, 3)
+np.swapaxes(valid_data, 1, 3)
 
 #Model Parameters
 input_shape=train_data.shape[1:]
-num_filters_first=32
+num_filters_first=64
 num_filters_second=64
-num_filters_third=64
 filter_size=2
 filter_size_second=4
-dropout=0.25
+dropout_conv=0.25
 pool_size=2
 activation='relu'
 units=256
@@ -67,13 +66,13 @@ dropout_dense=0.5
 # Build Keras model
 model = Sequential()
 
-model.add(Conv1D(num_filters_second, filter_size, padding='same', activation=activation, input_shape=input_shape))
-model.add(Conv1D(num_filters_second, filter_size, padding='same', activation=activation))
-model.add(MaxPooling1D())
-model.add(Conv1D(num_filters_third, filter_size_second, padding='same', activation=activation, input_shape=input_shape))
-model.add(Conv1D(num_filters_third, filter_size_second, padding='same', activation=activation))
-model.add(GlobalMaxPooling1D())
-model.add(Dropout(dropout))
+model.add(Conv2D(num_filters_first, filter_size, padding='same', activation=activation, input_shape=input_shape))
+model.add(Conv2D(num_filters_first, filter_size, padding='same', activation=activation))
+model.add(MaxPooling2D())
+model.add(Conv2D(num_filters_second, filter_size_second, padding='same', activation=activation, input_shape=input_shape))
+model.add(Conv2D(num_filters_second, filter_size_second, padding='same', activation=activation))
+model.add(GlobalMaxPooling2D())
+model.add(Dropout(dropout_conv))
 
 model.add(Dense(units, activation=activation))
 model.add(Dense(units, activation=activation))

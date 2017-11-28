@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.models import load_model
+from keras.models import load_model, Sequential
 from random import randrange
 # custom modules
 from utils     import Options
@@ -10,7 +10,6 @@ from simulator import Simulator
 opt = Options()
 sim = Simulator(opt.map_ind, opt.cub_siz, opt.pob_siz, opt.act_num)
 
-# TODO: load your agent
 agent = load_model('agent.hd5')
 
 # 1. control loop
@@ -39,7 +38,8 @@ for step in range(opt.eval_steps):
         # TODO: here you would let your agent take its action
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # this just gets a random action
-        action = randrange(opt.act_num)
+        prediction = agent.predict(sim.state_screen)
+        action = np.argmax(prediction)
         state = sim.step(action)
 
         epi_step += 1
