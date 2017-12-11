@@ -35,9 +35,9 @@ for step in range(opt.eval_steps):
         # start a new game
         state = sim.newGame(opt.tgt_y, opt.tgt_x)
     else:
-        input_hist_flat = np.roll(input_hist_flat, -25*25)
+        input_hist_flat = np.roll(input_hist_flat, -25*25*4)
         input_hist_flat[0, 25*25*3::] = rgb2gray(state.pob).flatten()
-        input_hist = input_hist_flat.reshape(1, 4, 25, 25)
+        input_hist = input_hist_flat.reshape(1, 25, 25, 4)
         action = np.argmax(agent.predict(input_hist, batch_size=32, verbose=0))
         state = sim.step(action)
         """
