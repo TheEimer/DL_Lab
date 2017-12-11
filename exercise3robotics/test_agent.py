@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from keras.models import load_model, Sequential
 from random import randrange
 # custom modules
-from utils     import Options
+from utils     import Options, rgb2gray
 from simulator import Simulator
 
 # 0. initialization
@@ -11,6 +11,7 @@ opt = Options()
 sim = Simulator(opt.map_ind, opt.cub_siz, opt.pob_siz, opt.act_num)
 
 agent = load_model('agent.hd5')
+input_hist_flat = np.zeros([1, 25*25*4])
 
 # 1. control loop
 if opt.disp_on:
@@ -34,14 +35,17 @@ for step in range(opt.eval_steps):
         # start a new game
         state = sim.newGame(opt.tgt_y, opt.tgt_x)
     else:
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # TODO: here you would let your agent take its action
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # this just gets a random action
-        prediction = agent.predict(sim.state_screen)
-        action = np.argmax(prediction)
+        input_hist_flat = np.roll(input_hist_flat, -25*25)
+        input_hist_flat[0, 25*25*3::] = rgb2gray(state.pob).flatten()
+        input_hist = input_hist_flat.reshape(1, 4, 25, 25)
+        action = np.argmax(agent.predict(input_hist, batch_size=32, verbose=0))
         state = sim.step(action)
-
+        """
+        action = randrange(opt.act_num)
+        state = sim.step(action)
+        print('action shape:', action)
+        print('state shape:', state)
+        """
         epi_step += 1
 
     if state.terminal or epi_step >= opt.early_stop:
