@@ -197,6 +197,9 @@ save_path = saver.save(sess, "./model.ckpt")
 plot_stats(stats)
 
 # Test on 500 steps in total
+if opt.disp_on:
+    win_all = None
+    win_pob = None
 
 epi_step = 0
 nepisodes_test = 0
