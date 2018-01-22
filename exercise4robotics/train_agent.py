@@ -103,7 +103,7 @@ if opt.disp_on:
 
 # lets assume we will train for a total of 1 million steps
 # this is just an example and you might want to change it
-steps = 3 * 10**3
+steps = 2 * 10**4
 epi_step = 0
 nepisodes = 0
 stats = Statistics(loss = np.zeros(steps), tests = np.zeros(steps // 250))
