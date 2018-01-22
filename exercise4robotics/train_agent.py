@@ -27,7 +27,6 @@ class Agent:
         self.targets = tf.placeholder(tf.float32, shape = [None])
         self.Q_s_next = tf.placeholder(tf.float32, shape=[None, opt.act_num])
         self.action_onehot = tf.placeholder(tf.float32, shape=[None, opt.act_num])
-        units = 32
 
         # Convolutional layers (padded to size)
         self.conv1 = tf.contrib.layers.conv2d(self.x, 32, 2)
@@ -38,11 +37,13 @@ class Agent:
         self.flatten = tf.contrib.layers.flatten(self.pool1)
 
         # Hidden layers
-        self.hidden1 = tf.contrib.layers.fully_connected(self.flatten, 32)
-        self.hidden2 = tf.contrib.layers.fully_connected(self.hidden1, 32)
+        self.hidden1 = tf.contrib.layers.fully_connected(self.flatten, 128)
+        self.dropout1 = tf.contrib.layers.dropout(self.hidden1)
+        self.hidden2 = tf.contrib.layers.fully_connected(self.dropout1, 128)
+        self.dropout2 = tf.contrib.layers.dropout(self.hidden2)
 
         # Linear output
-        self.out = tf.contrib.layers.fully_connected(self.hidden2, opt.act_num, activation_fn=None)
+        self.out = tf.contrib.layers.fully_connected(self.dropout2, opt.act_num, activation_fn=None)
 
         selected_q = tf.reduce_sum(self.action_onehot * self.out, 1)
         self.loss = tf.losses.mean_squared_error(selected_q, self.targets)
